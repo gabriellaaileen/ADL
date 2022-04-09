@@ -16,7 +16,7 @@ from keras.metrics import categorical_accuracy
 from keras import backend as K
 from keras import losses
 from keras.models import load_model as keras_load_model
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from keras.preprocessing.image import ImageDataGenerator
 import sys
 from keras.utils.generic_utils import get_custom_objects
