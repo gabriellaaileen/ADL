@@ -20,7 +20,7 @@ from utils import shuffle_together_simple, random_crop
 from random import randint
 import imgaug as ia
 from tensorflow.keras.utils import to_categorical
-#import matplotlib
+import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from imgaug import augmenters as iaa
