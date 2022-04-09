@@ -13,7 +13,7 @@ import glob
 from random import shuffle
 import h5py
 import argparse
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import random
 from keras.preprocessing.image import ImageDataGenerator
 from utils import random_crop
