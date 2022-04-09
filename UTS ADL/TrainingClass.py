@@ -19,7 +19,7 @@ from keras.metrics import categorical_accuracy
 from utils import shuffle_together_simple, random_crop
 from random import randint
 import imgaug as ia
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 #import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
