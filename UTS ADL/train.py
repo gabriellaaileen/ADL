@@ -81,7 +81,7 @@ for file in param_files:
     lc_fig, lc_ax = pp.learning_curve(os.path.join(params["save_folder"], params["name"] + ".csv"))
     lc_fig.savefig(os.path.join(params["save_folder"], "learning_curve.png"))
     
-    rc_fig, rc_ax = pp.ROC_curve()
-    rc_fig.savefig( os.path.join(params["save_folder"] , "roc_curve.png") )
+    #rc_fig, rc_ax = pp.ROC_curve()
+    #rc_fig.savefig( os.path.join(params["save_folder"] , "roc_curve.png") )
     
     
