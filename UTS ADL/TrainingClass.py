@@ -7,6 +7,7 @@ import signal
 import shutil
 import importlib.util
 import time
+import cv2
 
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.models import Model, Sequential, load_model
@@ -20,6 +21,7 @@ from utils import shuffle_together_simple, random_crop
 from random import randint
 import imgaug as ia
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.optimizers import Adam, RMSprop
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -57,25 +59,64 @@ class TrainingClass:
         else:
             self.loss = loss
         self.load_data()
-        if(duplicate == True):
-            self.train, self.train_label, self.train_bodypart = self.duplicate()
-            print("Finished duplicating images, the final size of your training set is %d images."%self.train.shape[0])
+        #if(duplicate == True):
+        #    self.train, self.train_label, self.train_bodypart = self.duplicate()
+        #    print("Finished duplicating images, the final size of your training set is %d images."%self.train.shape[0])
         self.write_metadata()
         self.compile()
         
     def load_data(self):
-        "Loads data from h5 file"
-        hf = h5py.File(self.data_path, 'r')
+      def center_crop(img, dim):
+        """Returns center cropped image
 
-        self.train = hf['train_img']
-        self.no_images, self.height, self.width, self.channels= self.train.shape
-        self.train_label = hf['train_label']
-        self.train_bodypart = hf['train_bodypart'][:]
-        self.no_images, _, _, self.no_classes = self.train_label.shape
-        self.val = hf['val_img'][:]
-        self.val_label = hf['val_label'][:]
-        self.val_label = self.val_label.reshape((-1,self.height*self.width,self.no_classes))
-        print("Data loaded succesfully.")
+        Args:
+        img: image to be center cropped
+        dim: dimensions (width, height) to be cropped from center
+        """
+        width, height = img.shape[1], img.shape[0]
+        #process crop width and height for max available dimension
+        crop_width = dim[0] if dim[0]<img.shape[1] else img.shape[1]
+        crop_height = dim[1] if dim[1]<img.shape[0] else img.shape[0] 
+
+        mid_x, mid_y = int(width/2), int(height/2)
+        cw2, ch2 = int(crop_width/2), int(crop_height/2) 
+        crop_img = img[mid_y-ch2:mid_y+ch2, mid_x-cw2:mid_x+cw2]
+        return crop_img
+        
+      label_training =[]
+      data_training=[]
+      data_dir = "/content/ADL/UTS ADL/data_training"
+      label_dir = "/content/ADL/UTS ADL/label"
+      data_list = os.listdir(data_dir)[:15]
+      label_list = os.listdir(label_dir)[:15]
+
+      for img_name in data_list:
+        label = cv2.imread(label_dir+"/"+img_name[:-4]+"_label.png")
+        data = cv2.imread(data_dir+"/"+img_name)
+        width, height, channel = data.shape
+        label = center_crop(label, (width,height))
+        label = cv2.resize(label,(200,200))
+        data = cv2.resize(data,(200,200))
+        data = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
+        label_training.append(label)
+        data_training.append(data)
+        
+      data_training = np.asarray(data_training)
+      label_training = np.asarray(label_training)
+      n, h, w = data_training.shape
+      data_training = data_training.reshape(n, h, w, 1)
+      label_training = label_training.reshape(n, h, w, 3)
+
+      self.train = data_training[:10]
+      self.no_images, self.height, self.width, self.channels= self.train.shape
+      self.train_label = label_training[:10]
+      #self.train_bodypart = hf['train_bodypart'][:]
+      self.no_images, _, _, self.no_classes = self.train_label.shape
+      self.val = data_training[10:15]
+      self.val_label = label_training[10:15]
+      self.val_label = self.val_label.reshape((-1,self.height*self.width,self.no_classes))
+      print("Data loaded succesfully.")
+
         
     def write_metadata(self):
         "Writes metadata to a txt file, with all the training information"
@@ -117,46 +158,7 @@ class TrainingClass:
                 bx = self.train[batch_indices]
                 
                 yield(bx,by)
-    def duplicate(self):
-        "Since our dataset is highly imbalanced among bodyparts, duplicate images from underrepresented bodyparts"
-        img_per_category, counts = np.unique(self.train_bodypart, return_counts=True)
-        img_per_category = dict(zip(img_per_category, counts))
-        EXAMPLES_PER_CATEGORY = max(img_per_category.values())
-        duplications_per_category = dict(img_per_category)
-        for key in img_per_category:
-            duplications_per_category[key] = int(EXAMPLES_PER_CATEGORY/img_per_category[key])
-
-        duplicated_size = sum(duplications_per_category[k]*img_per_category[k] + img_per_category[k] \
-                   for k in duplications_per_category)
-
-        train_duplicated = np.zeros((duplicated_size,self.height,self.width,self.train.shape[3]))
-        labels_duplicated = np.zeros((duplicated_size,self.height, self.width,self.no_classes))
-        bodypart_duplicated = np.empty((duplicated_size),dtype = 'S10')
-
-        train_duplicated[:self.no_images,...] = self.train
-        labels_duplicated[:self.no_images,...] = self.train_label
-        bodypart_duplicated[:self.no_images,...] = self.train_bodypart
-
-        # Loop  over the different kind of bodyparts
-        counter = self.no_images
-        counter_block = 0
-        for i, (k, v) in enumerate(duplications_per_category.items()):
-            # Indices of images with a given bodypart
-            indices = np.array(np.where(self.train_bodypart == k )[0])
-            counter_block += len(indices)
-            # Number of augmentation per image
-            N = int(v)
-            for j in indices:
-                for l in range(N):
-                    train_duplicated[counter,...] =self.train[j]
-                    labels_duplicated[counter,...] = self.train_label[j]
-                    bodypart_duplicated[counter] = k
-                    counter +=1
-
-        train_duplicated, labels_duplicated, bodypart_duplicated = shuffle_together_simple(train_duplicated, labels_duplicated, bodypart_duplicated)
-        self.no_images = train_duplicated.shape[0]
-        return train_duplicated, labels_duplicated, bodypart_duplicated
-
+   
     def augmentator(self, index):
         " This function defines the trainsformations to apply on the images, and if required on the labels"
 
@@ -279,8 +281,9 @@ class TrainingClass:
         print(self.model_path)
         self.model_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.model_module)
-        self.model = self.model_module.model(l2_lambda = self.reg, input_shape = (self.height, self.width, self.channels), classes = self.no_classes, kernel_size = self.kernel_size, filter_depth = self.filters)
-        self.model.compile(optimizer = rmsprop(lr = self.lrate, decay = 1e-6), loss = self.loss, metrics = ['accuracy'])
+        #self.model = self.model_module.model(l2_lambda = self.reg, input_shape = (self.height, self.width, self.channels), classes = self.no_classes, kernel_size = self.kernel_size, filter_depth = self.filters)
+        self.model = self.model_module.model(input_shape = (self.height, self.width, self.channels), classes = self.no_classes, kernel_size = self.kernel_size, filter_depth = self.filters)
+        self.model.compile(optimizer = RMSprop(lr = self.lrate, decay = 1e-6), loss = self.loss, metrics = ['accuracy'])
         #self.model.compile(optimizer = Adam(lr = self.lrate), loss = self.loss, metrics = ['accuracy'])
         #self.model.compile(optimizer = SGD(lr = self.lrate, momentum = 0.9, nesterov = True), loss = self.loss, metrics = ['accuracy'])
         print("Model loaded and compiled succesfully.")
