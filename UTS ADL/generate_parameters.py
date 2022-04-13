@@ -7,7 +7,7 @@ params_name = "parameters.txt"
 save_folder = "Model0"
 
 
-model = "Architectures/DoubleLinked.py"
+model = "/content/ADL/UTS ADL/XNet.py"
 name = "DLs200_64"
 
 lrate = 0.0001
@@ -20,7 +20,7 @@ loss = "categorical_crossentropy"
 #loss = "jaccard"
 #data = "Humans_CT_Phantom_s224.hdf5"
 data = "cv_dataset_s200.hdf5"
-no_epochs = 5000
+no_epochs = 20
 duplicate = True
 
 
