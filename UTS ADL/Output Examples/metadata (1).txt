@@ -1,0 +1,9 @@
+name: DLs200_64 
+Data: cv_dataset_s200.hdf5 
+kernel_size: 5 
+batch_size:5 
+filters [64, 128, 256, 512, 1024] 
+lrate: 0.000100 
+reg: 0.000000 
+Loss function: categorical_crossentropy 
+no_epochs: 10 

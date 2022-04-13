@@ -1,0 +1,22 @@
+Overall perfomance: 
+Accuracy: 50.0 
+Trainable parameters: 32576323 
+
+Performance per class:
+ Open beam: 96.0 
+ Soft Tissue: 41.0 
+ Bone: 0.0
+
+True Positives and False Positives:
+ TP: 93.0 
+ FP 59.0 
+
+ Threshold 90% 
+ TP90: 40.0 
+ FP90 48.0
+ 
+ Threshold 99% 
+ TP99: 1.0 
+ FP99 68.0
+ 
+ 
