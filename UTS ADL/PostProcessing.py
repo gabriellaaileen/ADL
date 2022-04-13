@@ -5,7 +5,10 @@ import h5py
 import glob
 import pandas as pd
 #import PIL
+import tensorflow.compat.v1.keras.backend as K
 import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
+#import tensorflow as tf
 import cv2
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.models import Model, Sequential
@@ -22,6 +25,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import sys
 from keras.utils.generic_utils import get_custom_objects
 from sklearn.metrics import roc_curve, auc
+import os
 
 
 sys.path.insert(0, '../')
@@ -41,33 +45,61 @@ class PostProcessing:
         print('Model loaded.')
         self.prediction_prob_rs, self.prediction_argmax = self.predict(device=device)
 
+
     def read_h5_file(self):
-        "Read data from h5file"
-        dataset = h5py.File(self.dataset_path, 'r')
-        self.train_images = dataset['train_img']
-        self.test_images =  dataset['test_img'][:]
-        self.val_images =  dataset['val_img'][:]
-        self.train_labels = dataset['train_label']
-        self.train_body = dataset['train_bodypart'][:]
-        self.test_labels = dataset['test_label'][:]
-        self.val_labels = dataset['val_label'][:]
-        self.test_body = dataset['test_bodypart'][:]
-        self.val_body = dataset['val_bodypart'][:]
-        self.test_filenames = dataset['test_file'][:]
-        self.val_filenames = dataset['val_file'][:]
-        self.no_images_training, self.height, self.width, self.classes = self.train_labels.shape
-        self.train_labels = np.reshape(self.train_labels, (-1,self.height*self.width ,self.classes))
-        self.test_labels = np.reshape(self.test_labels, (-1,self.height*self.width ,self.classes))
-        self.val_labels = np.reshape(self.val_labels, (-1,self.height*self.width ,self.classes))
-        self.test_images = np.concatenate((self.test_images, self.val_images))
-        self.test_labels = np.concatenate((self.test_labels, self.val_labels))
-        self.test_filenames = np.concatenate((self.test_filenames, self.val_filenames))
-        #REMOVE breast and Rectangles
-        #mask1 = np.where((self.test_filenames != b'breast_phantom') & (self.test_filenames != b'pmmaandal'))
-        #self.test_images = self.test_images[mask1]
-        #self.test_labels = self.test_labels[mask1]
+      def center_crop(img, dim):
+        """Returns center cropped image
+
+        Args:
+        img: image to be center cropped
+        dim: dimensions (width, height) to be cropped from center
+        """
+        width, height = img.shape[1], img.shape[0]
+        #process crop width and height for max available dimension
+        crop_width = dim[0] if dim[0]<img.shape[1] else img.shape[1]
+        crop_height = dim[1] if dim[1]<img.shape[0] else img.shape[0] 
+
+        mid_x, mid_y = int(width/2), int(height/2)
+        cw2, ch2 = int(crop_width/2), int(crop_height/2) 
+        crop_img = img[mid_y-ch2:mid_y+ch2, mid_x-cw2:mid_x+cw2]
+        return crop_img
+      
+      label_training =[]
+      data_training=[]
+      data_dir = "/content/ADL/UTS ADL/data_training"
+      label_dir = "/content/ADL/UTS ADL/label"
+      data_list = os.listdir(data_dir)[:20]
+      label_list = os.listdir(label_dir)[:20]
+
+      for img_name in data_list:
+        label = cv2.imread(label_dir+"/"+img_name[:-4]+"_label.png")
+        data = cv2.imread(data_dir+"/"+img_name)
+        width, height, channel = data.shape
+        label = center_crop(label, (width,height))
+        label = cv2.resize(label,(200,200))
+        data = cv2.resize(data,(200,200))
+        data = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
+        label_training.append(label)
+        data_training.append(data)
         
-        dataset.close()
+      data_training = np.asarray(data_training)
+      label_training = np.asarray(label_training)
+      n, h, w = data_training.shape
+      data_training = data_training.reshape(n, h, w, 1)
+      label_training = label_training.reshape(n, h, w, 3)
+
+      self.train_images = data_training[1:10]
+      self.test_images =  data_training[15:20]
+      self.val_images =  data_training[10:15]
+      self.train_labels = label_training[1:10]
+      self.test_labels = label_training[15:20]
+      self.val_labels = label_training[10:15]  
+      self.no_images_training, self.height, self.width, self.classes = self.train_labels.shape
+      self.train_labels = np.reshape(self.train_labels, (-1,self.height*self.width ,self.classes))
+      self.test_labels = np.reshape(self.test_labels, (-1,self.height*self.width ,self.classes))
+      self.val_labels = np.reshape(self.val_labels, (-1,self.height*self.width ,self.classes))
+      self.test_images = np.concatenate((self.test_images, self.val_images))
+      self.test_labels = np.concatenate((self.test_labels, self.val_labels))
         
     def load_model(self, device = "cpu", optimizer = Adam(lr=1e-4), loss = "categorical_crossentropy",\
                   metrics = ['accuracy'] ):
@@ -375,8 +407,8 @@ class PostProcessing:
         epochs = self.csv['epoch']
         train_loss = self.csv['loss']
         val_loss = self.csv['val_loss']
-        train_acc = self.csv['acc']
-        val_acc = self.csv['val_acc']
+        train_acc = self.csv['accuracy']
+        val_acc = self.csv['val_accuracy']
 		
         train_err = 1 - train_acc
         val_err = 1 - val_acc
