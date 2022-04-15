@@ -68,8 +68,8 @@ class PostProcessing:
       data_training=[]
       data_dir = "/content/ADL/UTS ADL/data_training"
       label_dir = "/content/ADL/UTS ADL/label"
-      data_list = os.listdir(data_dir)[:20]
-      label_list = os.listdir(label_dir)[:20]
+      data_list = sorted(os.listdir(data_dir)[:45])
+      label_list = sorted(os.listdir(label_dir)[:45])
 
       for img_name in data_list:
         label = cv2.imread(label_dir+"/"+img_name[:-4]+"_label.png")
@@ -88,12 +88,12 @@ class PostProcessing:
       data_training = data_training.reshape(n, h, w, 1)
       label_training = label_training.reshape(n, h, w, 3)
 
-      self.train_images = data_training[1:10]
-      self.test_images =  data_training[15:20]
-      self.val_images =  data_training[10:15]
-      self.train_labels = label_training[1:10]
-      self.test_labels = label_training[15:20]
-      self.val_labels = label_training[10:15]  
+      self.train_images = data_training[:35]
+      self.test_images =  data_training[40:45]
+      self.val_images =  data_training[35:40]
+      self.train_labels = label_training[:35]
+      self.test_labels = label_training[40:45]
+      self.val_labels = label_training[35:40]  
       self.no_images_training, self.height, self.width, self.classes = self.train_labels.shape
       self.train_labels = np.reshape(self.train_labels, (-1,self.height*self.width ,self.classes))
       self.test_labels = np.reshape(self.test_labels, (-1,self.height*self.width ,self.classes))
