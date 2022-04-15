@@ -87,8 +87,8 @@ class TrainingClass:
       data_training=[]
       data_dir = "/content/ADL/UTS ADL/data_training"
       label_dir = "/content/ADL/UTS ADL/label"
-      data_list = os.listdir(data_dir)[:15]
-      label_list = os.listdir(label_dir)[:15]
+      data_list = sorted(os.listdir(data_dir)[:45])
+      label_list = sorted(os.listdir(label_dir)[:45])
 
       for img_name in data_list:
         label = cv2.imread(label_dir+"/"+img_name[:-4]+"_label.png")
@@ -107,13 +107,13 @@ class TrainingClass:
       data_training = data_training.reshape(n, h, w, 1)
       label_training = label_training.reshape(n, h, w, 3)
 
-      self.train = data_training[:10]
+      self.train = data_training[:35]
       self.no_images, self.height, self.width, self.channels= self.train.shape
-      self.train_label = label_training[:10]
+      self.train_label = label_training[:35]
       #self.train_bodypart = hf['train_bodypart'][:]
       self.no_images, _, _, self.no_classes = self.train_label.shape
-      self.val = data_training[10:15]
-      self.val_label = label_training[10:15]
+      self.val = data_training[35:40]
+      self.val_label = label_training[35:40]
       self.val_label = self.val_label.reshape((-1,self.height*self.width,self.no_classes))
       print("Data loaded succesfully.")
 
