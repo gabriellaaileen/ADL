@@ -19,7 +19,7 @@ filter_list =  [64,128,256, 512, 1024]
 loss = "categorical_crossentropy"
 #loss = "jaccard"
 #data = "Humans_CT_Phantom_s224.hdf5"
-data = "cv_dataset_s200.hdf5"
+data = "/content/ADL/UTS ADL/data_training"
 no_epochs = 20
 duplicate = True
 
